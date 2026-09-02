@@ -1,0 +1,42 @@
+workflows:
+  android-release:
+    name: IMSBC Code Cargo Guide - Android
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Scaffold Flutter project
+        script: |
+          flutter create --org com.neuronai --project-name imsbc_cargo_guide --platforms=android .
+          cp app_main.dart lib/main.dart
+          sed -i '' 's/android:label="imsbc_cargo_guide"/android:label="IMSBC Code Cargo Guide"/' android/app/src/main/AndroidManifest.xml
+      - name: Add WebView package and HTML asset
+        script: |
+          flutter pub add webview_flutter
+          mkdir -p assets
+          cp index.html assets/index.html
+          sed -i '' 's/^  uses-material-design: true/  uses-material-design: true\n  assets:\n    - assets\/index.html/' pubspec.yaml
+      - name: App icon
+        script: |
+          mkdir -p assets/icon
+          cp icon_1024.png assets/icon/icon.png
+          sed -i '' 's/^dev_dependencies:/dev_dependencies:\n  flutter_launcher_icons: ^0.14.1/' pubspec.yaml
+          printf '\nflutter_launcher_icons:\n  android: true\n  ios: false\n  image_path: "assets\/icon\/icon.png"\n' >> pubspec.yaml
+          flutter pub get
+          dart run flutter_launcher_icons
+      - name: Build APK
+        script: flutter build apk --release
+      - name: Build AAB (Play Store)
+        script: flutter build appbundle --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+    publishing:
+      email:
+        recipients:
+          - neuronaicoin@gmail.com
+        notify:
+          success: true
+          failure: true
